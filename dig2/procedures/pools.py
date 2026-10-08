@@ -1,7 +1,6 @@
 """Fresh structural training pools for anchored fine-tuning, and the fidelity gate they must pass.
 
-SBM and Planar ship with 128 training graphs each. Anchored fine-tuning trains on a fresh pool of
-8192 graphs drawn from the SAME generative processes instead, so the target domains are not
+SBM and Planar ship with 128 training graphs each. Anchored fine-tuning trains on a pool of graphs drawn from the same generative processes, so target domains are not
 memorised during a 25k-step fine-tune. Only the TRAIN split is replaced: val/test are copied
 verbatim from the original (SPECTRE) dataset, so every validation and test reference is unchanged.
 
