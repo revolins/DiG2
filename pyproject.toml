@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dig2"
+version = "0.1.0"
+description = "DiG²: Discrete-interpolative Graph Generation"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+
+[project.optional-dependencies]
+wandb = ["wandb"]
+
+[tool.setuptools.packages.find]
+include = ["dig2*"]
+
+[tool.setuptools.package-data]
+dig2 = ["configs/**/*.yaml", "metrics/orca/*.cpp", "metrics/orca/*.h"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "gpu: needs a CUDA device",
+  "data: needs downloaded datasets under DIG2_DATA",
+  "ckpt: needs checkpoints under checkpoints/",
+]

@@ -1,0 +1,5 @@
+# @package _global_
+# Readout-depth variant used by the interpolation figures (progressive readout at depths 3/6/9/12).
+general:
+  progressive_readout:
+    readout_layers: [3, 6, 9, 12]

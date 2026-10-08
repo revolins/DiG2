@@ -1,0 +1,16 @@
+# @package _global_
+# Six-domain model: the paper's five domains plus Comm20 (worked example of adding a domain).
+# Builds its own unified cache; trains from scratch (the domain count changes parameter shapes).
+general:
+  name: dig2_comm20
+  guidance_weight_by_domain: {planar: 2.0, sbm: 3.0, tree: 2.0, comm20: 2.0, qm9: 2.0, zinc: 2.0}
+train:
+  domain_loss_weight: {planar: 1.0, sbm: 1.0, tree: 1.0, comm20: 1.0, qm9: 1.0, zinc: 1.0}
+dataset:
+  name: planar, sbm, tree, comm20, qm9, zinc
+  unified:
+    domain_order: [planar, sbm, tree, comm20, qm9, zinc]
+evaluation:
+  mixed:
+    per_domain_samples: {planar: 40, sbm: 40, tree: 40, comm20: 20, qm9: 128, zinc: 256}
+    per_domain_samples_test: {planar: 40, sbm: 40, tree: 40, comm20: 20, qm9: 10000, zinc: 10000}

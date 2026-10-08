@@ -1,0 +1,18 @@
+# @package _global_
+# Minutes-scale end-to-end check: 2 training steps, then a validation pass that samples 2 graphs
+# per domain with 10 reverse steps and scores them.
+general:
+  name: dig2_smoke
+  check_val_every_n_epochs: 1
+  samples_to_generate: 4
+train:
+  n_epochs: 1
+  steps_per_epoch: 2
+  save_model: false
+sample:
+  sample_steps: 10
+evaluation:
+  mixed:
+    per_domain_samples: {planar: 2, sbm: 2, tree: 2, qm9: 2, zinc: 2}
+trainer:
+  limit_train_batches: 2

@@ -1,0 +1,170 @@
+# DiG2: the multi-domain model of the paper (planar, sbm, tree, qm9, zinc).
+# Every value equals the configuration the released checkpoints were trained with, except the
+# evaluation-protocol RNG settings under `sample:` (see README, "Evaluation protocol").
+# Procedures (anchored fine-tuning, evaluation, single-domain runs, ...) are experiment overlays:
+#   python -m dig2.train +experiment=<name>   (files in configs/experiment/)
+
+general:
+  name: dig2
+  gpus: [0]                       # device ids; [] runs on CPU
+  resume: null                    # Lightning checkpoint to resume training from (restores loop state)
+  eval_resume: null               # weights-only strict load before fit/test (release checkpoints)
+  test_only: false                # true: test the eval_resume weights; or a Lightning checkpoint path
+  fast_dev_run: false
+  check_val_every_n_epochs: 100
+  sample_every_val: 1
+  ckpt_every_n_epochs: null       # null: sample_every_val * check_val_every_n_epochs
+  log_every_steps: 50
+  samples_to_generate: 256        # single-domain validation budget
+  samples_to_save: 4
+  chains_to_save: 1
+  number_chain_steps: 5
+  final_model_samples_to_generate: 10000   # single-domain test budget
+  final_model_samples_to_save: 50
+  final_model_chains_to_save: 1
+  save_samples: true              # write generated_samples_rank{N}.pkl at test time
+  save_samples_val: false         # ... and at validation time
+  target: k2
+
+  # Domain conditioning and classifier-free guidance
+  conditional: true
+  conditional_domain: true
+  domain_embedding: true
+  domain_emb_dim: 32
+  domain_time_hidden_dim: 64
+  cfg_null_mode: learned
+  cfg_dropout_prob: 0.05
+  guidance_weight: 2.0
+  guidance_weight_by_domain: {planar: 2.0, sbm: 3.0, tree: 2.0, qm9: 2.0, zinc: 2.0}
+
+  # Per-domain vocabulary V_d: out-of-domain classes are masked in the loss and at sampling.
+  train_domain_vocab_mask: true
+  vocab_mask:
+    passthrough_warn: once        # off | once | always
+
+  structural_encoder:
+    enabled: true
+    hidden_dim: 64
+    output_dim: 32
+    n_layers: 8
+    mp_depth: 2
+    rrwp_steps: 12
+    proto_ema_decay: 0.99
+    proto_center_momentum: 0.99
+
+  progressive_readout:
+    enabled: true
+    readout_layers: [8, 10, 12]
+    head_mode: per_depth
+    gate_mode: domain_gated       # off | mean | domain_gated
+    combine_space: logit
+    gate_hidden_dim: 64
+    gate_bias_init: uniform
+    combine_y: true
+    deep_supervision_weight: 1.0
+    deep_supervision_include_terminal: false
+    log_gate_weights: true
+
+model:
+  type: gt
+  transition: marginal
+  prior_mode: domain_specific     # domain_specific | default (single global prior)
+  lambda_train: [5, 0]
+  n_layers: 12
+  extra_features: rrwp
+  rrwp_steps: 12
+  hidden_mlp_dims: {X: 256, E: 128, y: 256}
+  hidden_dims: {dx: 256, de: 64, dy: 128, n_head: 8, dim_ffX: 256, dim_ffE: 128, dim_ffy: 2048}
+  cond_attn:
+    enable_qkv_residual: true
+    enable_head_gate: true
+    enable_xey_film: true
+    qkv_gain_init: 0.05
+    gate_gain_init: 0.05
+    xey_film_gain_init: 0.3
+  grad_checkpointing: false
+
+train:
+  n_epochs: 10000
+  lr: 0.0002
+  weight_decay: 1.0e-12
+  warmup_steps: 0
+  clip_grad: 1.0
+  seed: 42
+  time_distortion: polydec
+  save_model: true
+  progress_bar: false
+  num_workers: 1
+  persistent_workers: true
+  prefetch_factor: 2
+  batch_size: 512                 # single-domain loaders only
+  # Node-budget batching (multi-domain loader): each batch packs graphs of mixed domains up to
+  # max_nodes_per_batch nodes; `steps_per_epoch` batches make an epoch.
+  batching_mode: node_budget
+  max_nodes_per_batch: 256
+  min_graphs_per_batch: 1
+  steps_per_epoch: 250
+  node_budget_size_unbiased: false
+  domain_draw_weights: null       # {domain: weight}; null = proportional to dataset size
+  ddp_balanced_shards: true
+  domain_loss_weight: {planar: 1.0, sbm: 1.0, tree: 1.0, qm9: 1.0, zinc: 1.0}
+  anchor_ft:
+    enabled: false                # see configs/experiment/anchor_ft.yaml
+
+sample:
+  sample_steps: 200
+  sample_steps_by_domain: null
+  time_distortion: polydec
+  posterior_cfg: true             # classifier-free guidance on the bridge posterior's x1 logits
+  max_nodes_per_batch: 2048
+  # Paired sampling: each (domain, batch) draws from its own seeded generator, so a domain's
+  # samples do not depend on the other domains' budgets.
+  rng_safe_per_domain: false
+  rng_safe_per_batch: false
+  trajectory_seed_offset: null
+
+evaluation:
+  metrics_workers: null
+  mixed:
+    enabled: true
+    per_domain_samples: {planar: 40, sbm: 40, tree: 40, qm9: 128, zinc: 256}
+    per_domain_samples_test: {planar: 40, sbm: 40, tree: 40, qm9: 10000, zinc: 10000}
+    cache_nx_graphs: true
+
+dataset:
+  name: planar, sbm, tree, qm9, zinc
+  loader_backend: unified
+  datadir: data                   # relative to the repo root, or an absolute path
+  remove_h: true
+  aromatic: false
+  pin_memory: true
+  compute_fcd: true
+  compute_moses_metrics: true
+  unified_metrics:
+    enabled: true
+    shared_prefilter: true
+    shared_cache: true
+  unified:
+    root_subdir: unified
+    cache_mode: ram
+    feature_schema: semantic_global_v1
+    keep_legacy_onehot_fields: false
+    schema_version: 1
+    domain_order: [planar, sbm, tree, qm9, zinc]
+    domain_root_overrides: {}     # {domain: dir}: read that domain's raw splits from another directory
+    auto_build_missing_splits: true
+    force_rebuild: false
+    sample_watchdog_s: 2.0
+    verbose: true
+    log_memory: false
+
+# Passed through to pytorch_lightning.Trainer.
+trainer:
+  num_sanity_val_steps: 2
+  limit_val_batches: 1.0
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-${general.name}
+  job:
+    chdir: true

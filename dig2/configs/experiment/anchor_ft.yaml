@@ -1,0 +1,44 @@
+# @package _global_
+# Anchored fine-tuning (paper Alg. "anchored FT"): starting from a trained model, fine-tune ONLY
+# the edge pathway (attention q/k/v/x_out/e_*, edge FFNs, edge readout heads) toward the target
+# domains, while a KL(frozen teacher || student) anchor on the protected domains' predictions pins
+# their output distribution to the starting model.
+#   python -m dig2.tools.build_pool --domain sbm && python -m dig2.tools.build_pool --domain planar
+#   python -m dig2.train +experiment=anchor_ft general.eval_resume=checkpoints/dig2_base.ckpt
+general:
+  name: dig2_anchor_ft
+  check_val_every_n_epochs: 100000      # selection runs on generated samples, not in-run metrics
+  ckpt_every_n_epochs: 5
+train:
+  n_epochs: 100                         # x 250 steps = 25,000 steps
+  lr: 2.0e-5
+  warmup_steps: 200
+  weight_decay: 0.0
+  max_nodes_per_batch: 256
+  node_budget_size_unbiased: true
+  domain_draw_weights: {planar: 0.25, sbm: 0.25, tree: 0.1667, qm9: 0.1667, zinc: 0.1666}
+  # Protected domains leave the main weighted-mean CE (weights are clamped to 1e-8, not 0).
+  domain_loss_weight: {planar: 1.0, sbm: 1.0, tree: 0.0, qm9: 0.0, zinc: 0.0}
+  anchor_ft:
+    enabled: true
+    scope: edge                         # trainable parameter set (ANCHOR_FT_SCOPES)
+    target_domains: [sbm, planar]
+    protected_domains: [tree, qm9, zinc]
+    lambda_E: 5.0                       # edge weight inside the anchor KL, matching lambda_train
+    anchor_kl_weight: 12.0
+    anchor_channels: [X, E]
+    freeze_prototypes: true             # the shared prototype centering must not drift
+    monitor_every: 25
+    teacher_ckpt: null                  # required when resuming (general.resume) a fine-tune
+    expect_trainable_tensors: 228
+    expect_trainable_params: 3980559
+dataset:
+  unified:
+    # Fresh structural training pools (dig2.tools.build_pool) replace sbm/planar's train split.
+    domain_root_overrides: {sbm: data/pools/sbm, planar: data/pools/planar}
+trainer:
+  num_sanity_val_steps: 0
+  limit_val_batches: 0
+evaluation:
+  mixed:
+    per_domain_samples: {planar: 0, sbm: 0, tree: 0, qm9: 0, zinc: 0}

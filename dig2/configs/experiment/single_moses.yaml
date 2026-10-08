@@ -1,0 +1,32 @@
+# @package _global_
+# DiG2 backbone trained on MOSES alone (standalone single-domain loader). Domain conditioning,
+# the structural encoder and per-domain priors need more than one domain, so they are off; the
+# progressive readout uses a uniform gate. Hyperparameters are not tuned for this setting.
+general:
+  name: dig2_moses
+  conditional: false
+  conditional_domain: false
+  domain_embedding: false
+  train_domain_vocab_mask: false
+  structural_encoder:
+    enabled: false
+  progressive_readout:
+    gate_mode: mean
+  check_val_every_n_epochs: 10
+  samples_to_generate: 512
+model:
+  prior_mode: default
+train:
+  n_epochs: 1000
+  batch_size: 64
+evaluation:
+  mixed:
+    enabled: false
+dataset:
+  name: moses
+  loader_backend: single
+  datadir: data/moses/moses_pyg/
+  filter: false
+  remove_h: null
+  compute_fcd: false
+  compute_moses_metrics: true

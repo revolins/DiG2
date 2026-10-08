@@ -1,0 +1,18 @@
+# @package _global_
+# Evaluate a trained model on the test protocol: 40 graphs per structural domain and 10,000
+# molecules per molecular domain, scored with the paper's metrics (incl. FCD / MOSES at test).
+#   python -m dig2.train +experiment=eval                                 # checkpoints/dig2.ckpt
+#   python -m dig2.train +experiment=eval general.eval_resume=<ckpt> sample.trajectory_seed_offset=1
+# Paired sampling (rng_safe_*) makes each domain's samples independent of the other domains'
+# budgets; sweep sample.trajectory_seed_offset for repeated draws of the same noise z_T.
+general:
+  name: dig2_eval
+  eval_resume: checkpoints/dig2.ckpt
+  test_only: true
+  save_samples: true
+train:
+  save_model: false
+sample:
+  rng_safe_per_domain: true
+  rng_safe_per_batch: true
+  max_nodes_per_batch: 256
