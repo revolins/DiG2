@@ -220,7 +220,6 @@ __marimo__/
 # DiG2 (anchored: an unanchored `data/` would also drop the dig2/data package)
 /data/
 /outputs/
-checkpoints/*.ckpt
 checkpoints/*.pt
 dig2/metrics/orca/orca
 dig2/metrics/orca/tmp_*

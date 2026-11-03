@@ -7,9 +7,9 @@ model from the embedded architecture, so a checkpoint can never be paired with t
 
 | File | Model | Used for |
 |---|---|---|
-| `dig2.ckpt` | **Final DiG² model** — *weights to be added at release* | Main-paper results: `+experiment=eval` |
+| `dig2.ckpt` | **Benchmarked DiG² model (v2)**  | Main-paper results: `+experiment=eval` |
 
-Place the files in this directory (they are git-ignored). Verify a download with
+Place the files in this directory (they are git-ignored). Verify model weights integrity with
 
 ```bash
 python -c "import torch; from dig2.checkpoint import state_dict_sha256 as h; \
